@@ -17,9 +17,9 @@ const STORE_OPTIONS = [
 ];
 
 const ALTERNATIVE_REASONS = [
-  { value: 'cheaper', label: '💰 Cheaper' },
-  { value: 'healthier', label: '🥦 Healthier' },
-  { value: 'available', label: '📦 More Available' },
+  { value: 'cheaper', label: 'Cheaper' },
+  { value: 'healthier', label: 'Healthier' },
+  { value: 'available', label: 'More Available' },
 ] as const;
 
 interface IngredientEntry {
@@ -27,6 +27,11 @@ interface IngredientEntry {
   alternative: string;
   alternativeReason: 'cheaper' | 'healthier' | 'available' | '';
   stores: string[];
+}
+
+interface InstructionEntry {
+  text: string;
+  minutes: number | '';
 }
 
 interface RecipeFormData {
@@ -42,7 +47,7 @@ interface RecipeFormData {
   dietaryTags: string[];
   allergens: string[];
   ingredientEntries: IngredientEntry[];
-  instructions: string[];
+  instructionEntries: InstructionEntry[];
   calories: string;
   protein: string;
   carbs: string;
@@ -83,7 +88,7 @@ export function AddRecipeForm({ onClose, onSubmit }: AddRecipeFormProps) {
     dietaryTags: [],
     allergens: [],
     ingredientEntries: [emptyIngredient()],
-    instructions: [''],
+    instructionEntries: [{ text: '', minutes: '' }],
     calories: '',
     protein: '',
     carbs: '',
@@ -157,31 +162,40 @@ export function AddRecipeForm({ onClose, onSubmit }: AddRecipeFormProps) {
   };
 
   const addInstruction = () => {
-    setFormData({ ...formData, instructions: [...formData.instructions, ''] });
+    setFormData({ ...formData, instructionEntries: [...formData.instructionEntries, { text: '', minutes: '' }] });
   };
 
   const removeInstruction = (index: number) => {
     setFormData({
       ...formData,
-      instructions: formData.instructions.filter((_, i) => i !== index),
+      instructionEntries: formData.instructionEntries.filter((_, i) => i !== index),
     });
   };
 
-  const updateInstruction = (index: number, value: string) => {
-    const newInstructions = [...formData.instructions];
-    newInstructions[index] = value;
-    setFormData({ ...formData, instructions: newInstructions });
+  const updateInstructionField = <K extends keyof InstructionEntry>(index: number, field: K, value: InstructionEntry[K]) => {
+    const updated = [...formData.instructionEntries];
+    updated[index] = { ...updated[index], [field]: value };
+    setFormData({ ...formData, instructionEntries: updated });
   };
 
   const handleSubmit = () => {
-    onSubmit(formData);
+    const instructions = formData.instructionEntries
+      .filter(e => e.text.trim())
+      .map(e => {
+        const mins = Number(e.minutes);
+        const text = e.text.trim();
+        // Embed time into text if not already present, so the timer parser picks it up
+        const hasTime = /\d+\s*(min|sec|hour)/i.test(text);
+        return hasTime ? text : `${text} (~${mins} min)`;
+      });
+    onSubmit({ ...formData, instructions } as any);
     onClose();
   };
 
   const isStep1Valid = formData.title && formData.description && formData.image && formData.categories.length > 0;
   const isStep2Valid = formData.time && formData.servings && formData.prepTime && formData.cookTime;
   const isStep3Valid = formData.ingredientEntries.some(e => e.name.trim());
-  const isStep4Valid = formData.instructions.some(i => i.trim() && i.trim().length >= 30);
+  const isStep4Valid = formData.instructionEntries.some(e => e.text.trim().length >= 30 && e.minutes !== '' && Number(e.minutes) > 0);
   const isStep5Valid = formData.calories && formData.protein && formData.carbs && formData.fat;
 
   // Auto-calculate nutrition via USDA FoodData Central API
@@ -544,7 +558,7 @@ export function AddRecipeForm({ onClose, onSubmit }: AddRecipeFormProps) {
                 <div className="flex items-center justify-between mb-2">
                   <div>
                     <label className="text-sm font-medium text-gray-700">Cooking Instructions *</label>
-                    <p className="text-xs text-gray-400 mt-0.5">Write detailed steps — include techniques, timing & tips</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Each step requires a description and an estimated time</p>
                   </div>
                   <Button
                     onClick={addInstruction}
@@ -558,46 +572,59 @@ export function AddRecipeForm({ onClose, onSubmit }: AddRecipeFormProps) {
 
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
                   <p className="text-xs text-amber-800">
-                    ✍️ <strong>Tip:</strong> Each step should explain the <em>what</em>, <em>how</em>, and <em>why</em>. Mention heat levels, cook times, visual cues, and common mistakes to avoid. Aim for 2–4 sentences per step.
+                    <strong>Tip:</strong> Each step should explain the <em>what</em>, <em>how</em>, and <em>why</em>. Mention heat levels, visual cues, and common mistakes to avoid. Aim for 2–4 sentences per step.
                   </p>
                 </div>
 
                 <div className="space-y-4 max-h-[380px] overflow-y-auto pr-1">
-                  {formData.instructions.map((instruction, index) => {
-                    const charCount = instruction.trim().length;
+                  {formData.instructionEntries.map((entry, index) => {
+                    const charCount = entry.text.trim().length;
                     const isGood = charCount >= 80;
+                    const hasTime = entry.minutes !== '' && Number(entry.minutes) > 0;
                     return (
-                      <div key={index} className="space-y-1">
-                        <div className="flex gap-2">
-                          <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-500 text-white rounded-full flex items-center justify-center font-bold text-sm mt-1">
+                      <div key={index} className="border border-gray-200 rounded-xl overflow-hidden">
+                        <div className="flex gap-2 p-3 bg-white items-start">
+                          <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-500 text-white rounded-full flex items-center justify-center font-bold text-sm mt-0.5">
                             {index + 1}
                           </div>
-                          <div className="flex-1">
+                          <div className="flex-1 space-y-2">
                             <Textarea
-                              value={instruction}
-                              onChange={(e) => updateInstruction(index, e.target.value)}
-                              placeholder={`Step ${index + 1}: Describe this step in detail. For example: "Heat a large skillet over medium-high heat and add 2 tablespoons of oil. Once the oil shimmers and is almost smoking, add the onions and cook, stirring frequently, until they turn golden and translucent, about 5–7 minutes..."`}
-                              className="flex-1 rounded-xl border-gray-200 min-h-[110px] text-sm resize-none"
+                              value={entry.text}
+                              onChange={(e) => updateInstructionField(index, 'text', e.target.value)}
+                              placeholder={`Step ${index + 1}: Describe this step in detail — e.g. "Heat a large skillet over medium-high heat and add 2 tablespoons of oil. Once the oil shimmers, add the onions and cook, stirring frequently, until golden and translucent..."`}
+                              className="w-full rounded-xl border-gray-200 min-h-[100px] text-sm resize-none"
                             />
-                            <div className="flex items-center justify-between mt-1">
-                              <span className={`text-xs ${isGood ? 'text-green-600' : charCount > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
+                                <label className="text-xs font-medium text-gray-600 whitespace-nowrap">Estimated time *</label>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  value={entry.minutes}
+                                  onChange={(e) => updateInstructionField(index, 'minutes', e.target.value === '' ? '' : parseInt(e.target.value) || '')}
+                                  placeholder="0"
+                                  className="w-16 h-7 text-sm text-center border-gray-200 rounded-lg p-0 px-1"
+                                />
+                                <span className="text-xs text-gray-500">min</span>
+                              </div>
+                              <span className={`text-xs ${isGood && hasTime ? 'text-green-600' : charCount > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
                                 {charCount === 0
-                                  ? 'Start typing a detailed step...'
+                                  ? 'Enter a detailed description above'
+                                  : !hasTime
+                                  ? 'Add an estimated time'
                                   : isGood
-                                  ? `✓ ${charCount} characters — looks detailed!`
-                                  : `${charCount} characters — add more detail (aim for 80+)`}
+                                  ? 'Looks good!'
+                                  : `${charCount} chars — add more detail (aim for 80+)`}
                               </span>
                             </div>
                           </div>
-                          {formData.instructions.length > 1 && (
-                            <Button
+                          {formData.instructionEntries.length > 1 && (
+                            <button
                               onClick={() => removeInstruction(index)}
-                              variant="outline"
-                              size="sm"
-                              className="h-10 w-10 rounded-xl border-red-200 text-red-500 hover:bg-red-50 mt-1 flex-shrink-0"
+                              className="flex-shrink-0 w-7 h-7 rounded-lg border border-red-200 text-red-400 hover:bg-red-50 flex items-center justify-center mt-0.5"
                             >
-                              <Minus className="w-4 h-4" />
-                            </Button>
+                              <Minus className="w-3.5 h-3.5" />
+                            </button>
                           )}
                         </div>
                       </div>
