@@ -2187,6 +2187,9 @@ export default function App() {
   };
 
   const handleAddRecipe = (recipeData: any) => {
+    const entries: { name: string; alternative: string; alternativeReason: string; stores: string[] }[] =
+      recipeData.ingredientEntries ?? [];
+
     const newRecipe: Recipe = {
       id: Date.now().toString(),
       title: recipeData.title,
@@ -2199,7 +2202,7 @@ export default function App() {
       dietaryTags: recipeData.dietaryTags,
       description: recipeData.description,
       allergens: recipeData.allergens ?? [],
-      ingredients: recipeData.ingredients.filter((i: string) => i.trim()),
+      ingredients: entries.map(e => e.name).filter(n => n.trim()),
       instructions: recipeData.instructions.filter((i: string) => i.trim()),
       isFavorite: false,
       rating: 5,
@@ -2212,8 +2215,19 @@ export default function App() {
         fiber: recipeData.fiber ? parseInt(recipeData.fiber) : undefined,
         sugar: recipeData.sugar ? parseInt(recipeData.sugar) : undefined,
       },
-      alternatives: [],
-      stores: [],
+      alternatives: entries
+        .filter(e => e.name.trim() && e.alternative.trim())
+        .map(e => ({
+          original: e.name.trim(),
+          alternative: e.alternative.trim(),
+          reason: (e.alternativeReason || 'available') as 'cheaper' | 'available' | 'healthier',
+        })),
+      stores: entries
+        .filter(e => e.name.trim() && e.stores.length > 0)
+        .map(e => ({
+          ingredient: e.name.trim(),
+          stores: e.stores,
+        })),
       comments: [],
       isUserCreated: true,
       createdByEmail: userProfile.email,

@@ -1,11 +1,33 @@
 import { useState } from 'react';
-import { X, ArrowRight, ArrowLeft, Plus, Minus, Upload, Image as ImageIcon, Calculator } from 'lucide-react';
+import { X, ArrowRight, ArrowLeft, Plus, Minus, Upload, Calculator, ChevronDown, ChevronUp, Store } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
 import { calculateNutritionUSDA } from '../../utils/usdaNutrition';
+
+const STORE_OPTIONS = [
+  'SM Supermarket', 'Robinsons Supermarket', 'Puregold', 'S&R',
+  'Landmark Supermarket', 'Rustan\'s Supermarket', 'Walter Mart',
+  'Shopwise', '7-Eleven', 'AllDay Supermarket', 'Landers Superstore',
+  'Metro Gaisano', 'Prince Hypermart', 'Savemore', 'Wet Market',
+  'Palengke', 'Farmers Market', 'Online (Lazada/Shopee)', 'Mercury Drug',
+  'The Generics Pharmacy',
+];
+
+const ALTERNATIVE_REASONS = [
+  { value: 'cheaper', label: '💰 Cheaper' },
+  { value: 'healthier', label: '🥦 Healthier' },
+  { value: 'available', label: '📦 More Available' },
+] as const;
+
+interface IngredientEntry {
+  name: string;
+  alternative: string;
+  alternativeReason: 'cheaper' | 'healthier' | 'available' | '';
+  stores: string[];
+}
 
 interface RecipeFormData {
   title: string;
@@ -19,8 +41,7 @@ interface RecipeFormData {
   description: string;
   dietaryTags: string[];
   allergens: string[];
-  ingredients: string[];
-  instructions: string[];
+  ingredientEntries: IngredientEntry[];
   instructions: string[];
   calories: string;
   protein: string;
@@ -38,9 +59,17 @@ interface AddRecipeFormProps {
 const categories = ['breakfast', 'lunch', 'dinner', 'dessert', 'snack'];
 const dietaryOptions = ['Vegan', 'Vegetarian', 'Gluten-Free', 'Dairy-Free', 'Low-Sodium', 'Keto', 'High Protein'];
 
+const emptyIngredient = (): IngredientEntry => ({
+  name: '',
+  alternative: '',
+  alternativeReason: '',
+  stores: [],
+});
+
 export function AddRecipeForm({ onClose, onSubmit }: AddRecipeFormProps) {
   const [step, setStep] = useState(1);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [expandedIngredient, setExpandedIngredient] = useState<number | null>(null);
   const [formData, setFormData] = useState<RecipeFormData>({
     title: '',
     image: '',
@@ -53,7 +82,7 @@ export function AddRecipeForm({ onClose, onSubmit }: AddRecipeFormProps) {
     description: '',
     dietaryTags: [],
     allergens: [],
-    ingredients: [''],
+    ingredientEntries: [emptyIngredient()],
     instructions: [''],
     calories: '',
     protein: '',
@@ -104,24 +133,27 @@ export function AddRecipeForm({ onClose, onSubmit }: AddRecipeFormProps) {
   };
 
   const addIngredient = () => {
-    setFormData({ ...formData, ingredients: [...formData.ingredients, ''] });
+    setFormData({ ...formData, ingredientEntries: [...formData.ingredientEntries, emptyIngredient()] });
   };
 
   const removeIngredient = (index: number) => {
-    const newIngredients = formData.ingredients.filter((_, i) => i !== index);
     setFormData({
       ...formData,
-      ingredients: newIngredients,
+      ingredientEntries: formData.ingredientEntries.filter((_, i) => i !== index),
     });
+    if (expandedIngredient === index) setExpandedIngredient(null);
   };
 
-  const updateIngredient = (index: number, value: string) => {
-    const newIngredients = [...formData.ingredients];
-    newIngredients[index] = value;
-    setFormData({ 
-      ...formData, 
-      ingredients: newIngredients,
-    });
+  const updateIngredientField = <K extends keyof IngredientEntry>(index: number, field: K, value: IngredientEntry[K]) => {
+    const updated = [...formData.ingredientEntries];
+    updated[index] = { ...updated[index], [field]: value };
+    setFormData({ ...formData, ingredientEntries: updated });
+  };
+
+  const toggleIngredientStore = (index: number, store: string) => {
+    const current = formData.ingredientEntries[index].stores;
+    const updated = current.includes(store) ? current.filter(s => s !== store) : [...current, store];
+    updateIngredientField(index, 'stores', updated);
   };
 
   const addInstruction = () => {
@@ -148,8 +180,8 @@ export function AddRecipeForm({ onClose, onSubmit }: AddRecipeFormProps) {
 
   const isStep1Valid = formData.title && formData.description && formData.image && formData.categories.length > 0;
   const isStep2Valid = formData.time && formData.servings && formData.prepTime && formData.cookTime;
-  const isStep3Valid = formData.ingredients.some(i => i.trim());
-  const isStep4Valid = formData.instructions.some(i => i.trim());
+  const isStep3Valid = formData.ingredientEntries.some(e => e.name.trim());
+  const isStep4Valid = formData.instructions.some(i => i.trim() && i.trim().length >= 30);
   const isStep5Valid = formData.calories && formData.protein && formData.carbs && formData.fat;
 
   // Auto-calculate nutrition via USDA FoodData Central API
@@ -157,7 +189,7 @@ export function AddRecipeForm({ onClose, onSubmit }: AddRecipeFormProps) {
     const servingsNum = parseInt(formData.servings) || 1;
     setIsCalculating(true);
     try {
-      const nutrition = await calculateNutritionUSDA(formData.ingredients, servingsNum);
+      const nutrition = await calculateNutritionUSDA(formData.ingredientEntries.map(e => e.name), servingsNum);
       setFormData({
         ...formData,
         calories: nutrition.calories.toString(),
@@ -386,7 +418,10 @@ export function AddRecipeForm({ onClose, onSubmit }: AddRecipeFormProps) {
                 className="space-y-4"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-gray-700">Ingredients *</label>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Ingredients *</label>
+                    <p className="text-xs text-gray-400 mt-0.5">Add optional alternatives & where to buy per ingredient</p>
+                  </div>
                   <Button
                     onClick={addIngredient}
                     size="sm"
@@ -397,25 +432,100 @@ export function AddRecipeForm({ onClose, onSubmit }: AddRecipeFormProps) {
                   </Button>
                 </div>
 
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {formData.ingredients.map((ingredient: string, index: number) => (
-                    <div key={index} className="flex gap-2">
-                      <Input
-                        value={ingredient}
-                        onChange={(e) => updateIngredient(index, e.target.value)}
-                        placeholder={`Ingredient ${index + 1}`}
-                        className="flex-1 h-12 rounded-xl border-gray-200"
-                      />
-                      {formData.ingredients.length > 1 && (
-                        <Button
-                          onClick={() => removeIngredient(index)}
-                          variant="outline"
-                          size="sm"
-                          className="h-12 w-12 rounded-xl border-red-200 text-red-500 hover:bg-red-50"
+                <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                  {formData.ingredientEntries.map((entry, index) => (
+                    <div key={index} className="border border-gray-200 rounded-xl overflow-hidden">
+                      {/* Ingredient name row */}
+                      <div className="flex gap-2 p-3 bg-white items-center">
+                        <div className="w-7 h-7 flex-shrink-0 bg-gradient-to-br from-amber-400 to-orange-500 text-white rounded-full flex items-center justify-center font-bold text-xs">
+                          {index + 1}
+                        </div>
+                        <Input
+                          value={entry.name}
+                          onChange={(e) => updateIngredientField(index, 'name', e.target.value)}
+                          placeholder={`Ingredient ${index + 1} (e.g., 2 cups flour)`}
+                          className="flex-1 h-10 rounded-lg border-gray-200 text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setExpandedIngredient(expandedIngredient === index ? null : index)}
+                          className="flex-shrink-0 flex items-center gap-1 text-xs text-amber-600 hover:text-amber-800 font-medium px-2 py-1 rounded-lg hover:bg-amber-50 transition-colors"
+                          title="Add alternative & stores"
                         >
-                          <Minus className="w-4 h-4" />
-                        </Button>
-                      )}
+                          <Store className="w-3.5 h-3.5" />
+                          {expandedIngredient === index ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                        </button>
+                        {formData.ingredientEntries.length > 1 && (
+                          <button
+                            onClick={() => removeIngredient(index)}
+                            className="flex-shrink-0 w-7 h-7 rounded-lg border border-red-200 text-red-400 hover:bg-red-50 flex items-center justify-center"
+                          >
+                            <Minus className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Expanded: alternative + stores */}
+                      <AnimatePresence>
+                        {expandedIngredient === index && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="border-t border-gray-100 bg-amber-50/50 overflow-hidden"
+                          >
+                            <div className="p-3 space-y-3">
+                              {/* Alternative ingredient */}
+                              <div>
+                                <label className="text-xs font-medium text-gray-600 mb-1 block">Alternative Ingredient <span className="text-gray-400">(optional)</span></label>
+                                <div className="flex gap-2">
+                                  <Input
+                                    value={entry.alternative}
+                                    onChange={(e) => updateIngredientField(index, 'alternative', e.target.value)}
+                                    placeholder="e.g., Coconut aminos"
+                                    className="flex-1 h-9 rounded-lg border-gray-200 text-sm bg-white"
+                                  />
+                                  <select
+                                    value={entry.alternativeReason}
+                                    onChange={(e) => updateIngredientField(index, 'alternativeReason', e.target.value as IngredientEntry['alternativeReason'])}
+                                    className="h-9 rounded-lg border border-gray-200 bg-white text-xs text-gray-700 px-2 focus:outline-none focus:border-amber-400"
+                                    disabled={!entry.alternative}
+                                  >
+                                    <option value="">Reason</option>
+                                    {ALTERNATIVE_REASONS.map(r => (
+                                      <option key={r.value} value={r.value}>{r.label}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+
+                              {/* Where to buy */}
+                              <div>
+                                <label className="text-xs font-medium text-gray-600 mb-1.5 block">
+                                  Where to Buy <span className="text-gray-400">(optional — select all that apply)</span>
+                                </label>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {STORE_OPTIONS.map(store => (
+                                    <button
+                                      key={store}
+                                      type="button"
+                                      onClick={() => toggleIngredientStore(index, store)}
+                                      className={`px-2.5 py-1 rounded-full text-xs border transition-all ${
+                                        entry.stores.includes(store)
+                                          ? 'bg-amber-500 text-white border-amber-500 font-medium'
+                                          : 'bg-white text-gray-600 border-gray-200 hover:border-amber-300'
+                                      }`}
+                                    >
+                                      {store}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   ))}
                 </div>
@@ -432,7 +542,10 @@ export function AddRecipeForm({ onClose, onSubmit }: AddRecipeFormProps) {
                 className="space-y-4"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-gray-700">Instructions *</label>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Cooking Instructions *</label>
+                    <p className="text-xs text-gray-400 mt-0.5">Write detailed steps — include techniques, timing & tips</p>
+                  </div>
                   <Button
                     onClick={addInstruction}
                     size="sm"
@@ -443,30 +556,53 @@ export function AddRecipeForm({ onClose, onSubmit }: AddRecipeFormProps) {
                   </Button>
                 </div>
 
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {formData.instructions.map((instruction, index) => (
-                    <div key={index} className="flex gap-2">
-                      <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-500 text-white rounded-full flex items-center justify-center font-bold text-sm mt-2">
-                        {index + 1}
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                  <p className="text-xs text-amber-800">
+                    ✍️ <strong>Tip:</strong> Each step should explain the <em>what</em>, <em>how</em>, and <em>why</em>. Mention heat levels, cook times, visual cues, and common mistakes to avoid. Aim for 2–4 sentences per step.
+                  </p>
+                </div>
+
+                <div className="space-y-4 max-h-[380px] overflow-y-auto pr-1">
+                  {formData.instructions.map((instruction, index) => {
+                    const charCount = instruction.trim().length;
+                    const isGood = charCount >= 80;
+                    return (
+                      <div key={index} className="space-y-1">
+                        <div className="flex gap-2">
+                          <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-500 text-white rounded-full flex items-center justify-center font-bold text-sm mt-1">
+                            {index + 1}
+                          </div>
+                          <div className="flex-1">
+                            <Textarea
+                              value={instruction}
+                              onChange={(e) => updateInstruction(index, e.target.value)}
+                              placeholder={`Step ${index + 1}: Describe this step in detail. For example: "Heat a large skillet over medium-high heat and add 2 tablespoons of oil. Once the oil shimmers and is almost smoking, add the onions and cook, stirring frequently, until they turn golden and translucent, about 5–7 minutes..."`}
+                              className="flex-1 rounded-xl border-gray-200 min-h-[110px] text-sm resize-none"
+                            />
+                            <div className="flex items-center justify-between mt-1">
+                              <span className={`text-xs ${isGood ? 'text-green-600' : charCount > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
+                                {charCount === 0
+                                  ? 'Start typing a detailed step...'
+                                  : isGood
+                                  ? `✓ ${charCount} characters — looks detailed!`
+                                  : `${charCount} characters — add more detail (aim for 80+)`}
+                              </span>
+                            </div>
+                          </div>
+                          {formData.instructions.length > 1 && (
+                            <Button
+                              onClick={() => removeInstruction(index)}
+                              variant="outline"
+                              size="sm"
+                              className="h-10 w-10 rounded-xl border-red-200 text-red-500 hover:bg-red-50 mt-1 flex-shrink-0"
+                            >
+                              <Minus className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      <Textarea
-                        value={instruction}
-                        onChange={(e) => updateInstruction(index, e.target.value)}
-                        placeholder={`Step ${index + 1}`}
-                        className="flex-1 rounded-xl border-gray-200 min-h-[80px]"
-                      />
-                      {formData.instructions.length > 1 && (
-                        <Button
-                          onClick={() => removeInstruction(index)}
-                          variant="outline"
-                          size="sm"
-                          className="h-10 w-10 rounded-xl border-red-200 text-red-500 hover:bg-red-50 mt-2"
-                        >
-                          <Minus className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </motion.div>
             )}
