@@ -2622,6 +2622,10 @@ export default function App() {
 
   // Recipe Detail Screen
   if (currentScreen === 'recipe' && selectedRecipe) {
+    const currentRecipeIndex = recipes.findIndex(r => r.id === selectedRecipe.id);
+    const prevRecipe = currentRecipeIndex > 0 ? recipes[currentRecipeIndex - 1] : null;
+    const nextRecipe = currentRecipeIndex < recipes.length - 1 ? recipes[currentRecipeIndex + 1] : null;
+
     return (
       <div className="min-h-screen bg-background pb-40">
         {/* Hero Image */}
@@ -2636,12 +2640,35 @@ export default function App() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
             </div>
             
+            {/* Back button */}
             <button
               onClick={() => setCurrentScreen('home')}
               className="absolute top-6 left-6 w-11 h-11 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
             >
               <ArrowLeft className="w-5 h-5 text-gray-900" />
             </button>
+
+            {/* Prev / Next recipe arrows */}
+            <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 flex items-center justify-between pointer-events-none px-3">
+              {prevRecipe ? (
+                <button
+                  onClick={() => { setSelectedRecipe(prevRecipe); setInstructionStep(0); setStepTimerActive(false); setStepTimeRemaining(0); }}
+                  className="pointer-events-auto w-11 h-11 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white hover:scale-110 transition-all duration-200 group"
+                  title={prevRecipe.title}
+                >
+                  <ChevronLeft className="w-6 h-6 text-gray-800 group-hover:text-orange-500 transition-colors" />
+                </button>
+              ) : <div className="w-11" />}
+              {nextRecipe ? (
+                <button
+                  onClick={() => { setSelectedRecipe(nextRecipe); setInstructionStep(0); setStepTimerActive(false); setStepTimeRemaining(0); }}
+                  className="pointer-events-auto w-11 h-11 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white hover:scale-110 transition-all duration-200 group"
+                  title={nextRecipe.title}
+                >
+                  <ChevronRight className="w-6 h-6 text-gray-800 group-hover:text-orange-500 transition-colors" />
+                </button>
+              ) : <div className="w-11" />}
+            </div>
           </div>
         </div>
 
