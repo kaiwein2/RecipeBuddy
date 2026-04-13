@@ -1,0 +1,67 @@
+﻿
+> Configure project :app
+WARNING: Using flatDir should be avoided because it doesn't support any meta-data formats.
+
+> Configure project :capacitor-cordova-android-plugins
+WARNING: Using flatDir should be avoided because it doesn't support any meta-data formats.
+
+> Task :app:signingReport
+Variant: debug
+Config: debug
+Store: C:\Users\user\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: E3:EA:A9:1C:A1:47:4A:08:55:84:30:E5:74:74:1D:D0
+SHA1: 69:B7:D3:4E:95:B5:74:A4:2B:D2:C8:8C:65:B2:83:80:C7:47:78:55
+SHA-256: 29:53:13:F1:4D:14:26:34:46:93:57:C0:C3:27:45:05:E2:F8:BA:58:12:73:40:C6:CD:AA:59:F3:2C:1A:23:BE
+Valid until: Friday, March 10, 2056
+----------
+Variant: release
+Config: null
+Store: null
+Alias: null
+----------
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\user\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: E3:EA:A9:1C:A1:47:4A:08:55:84:30:E5:74:74:1D:D0
+SHA1: 69:B7:D3:4E:95:B5:74:A4:2B:D2:C8:8C:65:B2:83:80:C7:47:78:55
+SHA-256: 29:53:13:F1:4D:14:26:34:46:93:57:C0:C3:27:45:05:E2:F8:BA:58:12:73:40:C6:CD:AA:59:F3:2C:1A:23:BE
+Valid until: Friday, March 10, 2056
+----------
+
+> Task :capacitor-android:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\user\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: E3:EA:A9:1C:A1:47:4A:08:55:84:30:E5:74:74:1D:D0
+SHA1: 69:B7:D3:4E:95:B5:74:A4:2B:D2:C8:8C:65:B2:83:80:C7:47:78:55
+SHA-256: 29:53:13:F1:4D:14:26:34:46:93:57:C0:C3:27:45:05:E2:F8:BA:58:12:73:40:C6:CD:AA:59:F3:2C:1A:23:BE
+Valid until: Friday, March 10, 2056
+----------
+
+> Task :capacitor-cordova-android-plugins:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\user\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: E3:EA:A9:1C:A1:47:4A:08:55:84:30:E5:74:74:1D:D0
+SHA1: 69:B7:D3:4E:95:B5:74:A4:2B:D2:C8:8C:65:B2:83:80:C7:47:78:55
+SHA-256: 29:53:13:F1:4D:14:26:34:46:93:57:C0:C3:27:45:05:E2:F8:BA:58:12:73:40:C6:CD:AA:59:F3:2C:1A:23:BE
+Valid until: Friday, March 10, 2056
+----------
+
+> Task :capacitor-haptics:signingReport
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\user\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: E3:EA:A9:1C:A1:47:4A:08:55:84:30:E5:74:74:1D:D0
+SHA1: 69:B7:D3:4E:95:B5:74:A4:2B:D2:C8:8C:65:B2:83:80:C7:47:78:55
+SHA-256: 29:53:13:F1:4D:14:26:34:46:93:57:C0:C3:27:45:05:E2:F8:BA:58:12:73:40:C6:CD:AA:59:F3:2C:1A:23:BE
+Valid until: Friday, March 10, 2056
+----------
+
+BUILD SUCCESSFUL in 1s
+4 actionable tasks: 4 executed

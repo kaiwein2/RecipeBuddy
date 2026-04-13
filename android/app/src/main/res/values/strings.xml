@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">recipebuddy</string>
+    <string name="title_activity_main">recipebuddy</string>
+    <string name="package_name">com.example.recipebuddy</string>
+    <string name="custom_url_scheme">com.example.recipebuddy</string>
+    <string name="server_client_id">1050520470668-6h5hh4ds28pkallng5jke0a1v69t0svl.apps.googleusercontent.com</string>
+</resources>
